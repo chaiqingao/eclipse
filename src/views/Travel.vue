@@ -22,20 +22,8 @@ export default {
       map: null,
       graphicsLayer: null,
       polygonGraphic: null,
-      simpleFillSymbol: null,
-      activeGraphic: null,
       bufferGraphic: null,
       scenicspot: [],
-      eclipse_polygon: {
-        type: "polygon",
-        rings: [
-          [-118.818984489994, 34.0137559967283],
-          [-118.806796597377, 34.0215816298725],
-          [-118.791432890735, 34.0163883241613],
-          [-118.79596686535, 34.008564864635],
-          [-118.808558110679, 34.0035027131376]
-        ]
-      },
       features: [
         "eclipsearray/2020_06_21.json",
         "eclipsearray/2020_12_14.json",
@@ -68,188 +56,22 @@ export default {
   mounted() {
     EventBus.$emit("router_change", "Travel");
     loadModules(
-      [
-        "esri/Map",
-        "esri/views/MapView",
-        "esri/Graphic",
-        "esri/layers/GraphicsLayer",
-        "esri/geometry/geometryEngine"
-      ],
+      ["esri/Map", "esri/views/MapView", "esri/layers/GraphicsLayer"],
       { css: true }
-    ).then(([Map, MapView, Graphic, GraphicsLayer, geometryEngine]) => {
+    ).then(([Map, MapView, GraphicsLayer]) => {
       const map = new Map({
         basemap: "topo-vector"
       });
       this.graphicsLayer = new GraphicsLayer();
-      var polygon = this.eclipse_polygon;
-      this.simpleFillSymbol = {
-        type: "simple-fill",
-        color: [227, 139, 79, 0.8], // orange, opacity 80%
-        outline: {
-          color: [255, 255, 255],
-          width: 1
-        }
-      };
-      this.polygonGraphic = new Graphic({
-        geometry: polygon,
-        symbol: this.simpleFillSymbol
-      });
-      this.graphicsLayer.add(this.polygonGraphic);
       map.add(this.graphicsLayer);
       this.view = new MapView({
         container: this.$el,
         map: map,
-        center: [-118.63, 34.1],
-        zoom: 12
-      });
-      this.view.on("pointer-move", (event)=> {
-        this.findNearestGraphic(event).then(function(graphic) {
-          if (graphic) {
-            this.activeGraphic = graphic;
-            var buffer = geometryEngine.geodesicBuffer(
-              this.activeGraphic.geometry,
-              0.25,
-              "miles"
-            );
-            this.drawBuffer(buffer);
-          }
-        });
+        center: [120, 30],
+        zoom: 3
       });
       this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
     });
-
-    // eslint-disable-next-line no-undef
-    // mapboxgl.accessToken =
-    //   "pk.eyJ1IjoiMzA1NzU4MDI2OCIsImEiOiJjazgyaWM4ZmkxMW5kM2ZvcTY4dGR4amtjIn0.TJrXjIIqVSpQOHM6MS_g6g";
-    // // eslint-disable-next-line no-undef
-    // this.map = new mapboxgl.Map({
-    //   container: "map",
-    //   style: "mapbox://styles/mapbox/light-v10",
-    //   center: [-68.13734351262877, 45.137451890638886],
-    //   zoom: 5
-    // });
-    // this.map.on("load", () => {
-    //   this.map.addSource("trace", {
-    //     type: "geojson",
-    //     data: {
-    //       type: "Feature",
-    //       geometry: {
-    //         type: "Polygon",
-    //         coordinates: [[0, 0]]
-    //       }
-    //     }
-    //   });
-    //   this.map.addSource("traceBuffer", {
-    //     type: "geojson",
-    //     data: {
-    //       type: "Feature",
-    //       geometry: {
-    //         type: "Polygon",
-    //         coordinates: [[0, 0]]
-    //       }
-    //     }
-    //   });
-    //   this.map.addLayer({
-    //     id: "maine0",
-    //     type: "fill",
-    //     source: "traceBuffer",
-    //     layout: {},
-    //     paint: {
-    //       "fill-color": "#040",
-    //       "fill-opacity": 0.3
-    //     }
-    //   });
-    //   this.map.addLayer({
-    //     id: "maine1",
-    //     type: "fill",
-    //     source: "trace",
-    //     layout: {},
-    //     paint: {
-    //       "fill-color": "#040",
-    //       "fill-opacity": 0.5
-    //     }
-    //   });
-    //   this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
-    // });
-    // this.axios.get("scenicspots.json").then(response => {
-    //   this.scenicspot = response.data;
-    //   this.scenicspot.forEach(item => {
-    //     this.map.loadImage(item.imgSrc, (error, image) => {
-    //       if (error) throw error;
-    //       this.map.addImage(item.SName, image);
-    //       this.map.addLayer({
-    //         id: "point" + item.SName,
-    //         type: "symbol",
-    //         source: {
-    //           type: "geojson",
-    //           data: {
-    //             type: "FeatureCollection",
-    //             features: [
-    //               {
-    //                 type: "Feature",
-    //                 geometry: {
-    //                   type: "Point",
-    //                   coordinates: [item.longitude, item.latitude]
-    //                 }
-    //               }
-    //             ]
-    //           }
-    //         },
-    //         layout: {
-    //           "icon-image": item.SName,
-    //           "icon-size": 0.25
-    //         }
-    //       });
-    //     });
-    //   });
-    // });
-    // for (let i = 0; i < this.features.length; i++) {
-    //   this.axios.get(this.features[i]).then(response => {
-    //     this.features[i] = {
-    //       type: "Feature",
-    //       geometry: {
-    //         type: "Polygon",
-    //         coordinates: response.data
-    //       }
-    //     };
-    //   });
-    // }
-    // // eslint-disable-next-line no-undef
-    // var nav = new mapboxgl.NavigationControl();
-    // this.map.addControl(nav, "top-right");
-    // this.map.addControl(
-    //   // eslint-disable-next-line no-undef
-    //   new mapboxgl.GeolocateControl({
-    //     positionOptions: {
-    //       enableHighAccuracy: true
-    //     },
-    //     trackUserLocation: false,
-    //     showUserLocation: true
-    //   }),
-    //   "top-right"
-    // );
-    // this.map.addControl(
-    //   // eslint-disable-next-line no-undef
-    //   new MapboxDirections({
-    //     // eslint-disable-next-line no-undef
-    //     accessToken: mapboxgl.accessToken
-    //   }),
-    //   "top-right"
-    // );
-    // setInterval(() => {
-    //   if (this.$route.name == "Travel") {
-    //     this.current_text = document.getElementsByTagName("input")[1].value;
-    //   }
-    // }, 100);
-    // document
-    //   .getElementsByClassName("mapboxgl-ctrl mapboxgl-ctrl-group")[0]
-    //   .setAttribute("style", "top:15px;right:5px;position:absolute");
-    // document
-    //   .getElementsByClassName("mapboxgl-ctrl mapboxgl-ctrl-group")[1]
-    //   .setAttribute("style", "top:115px;right:5px;position:absolute");
-    // document
-    //   .getElementsByClassName("mapboxgl-ctrl-directions mapboxgl-ctrl")[0]
-    //   .setAttribute("style", "top:15px;right:50px;position:absolute");
   },
   watch: {
     current_text: function() {
@@ -288,17 +110,46 @@ export default {
       return s;
     },
     changeSource(fileName) {
-      loadModules(["esri/Graphic"]).then(([Graphic]) => {
-        this.axios.get(fileName).then(response => {
-          this.eclipse_polygon.rings = response.data[0];
-          this.graphicsLayer.remove(this.polygonGraphic);
-          this.polygonGraphic = new Graphic({
-            geometry: this.eclipse_polygon,
-            symbol: this.simpleFillSymbol
+      loadModules(["esri/Graphic", "esri/geometry/geometryEngine"]).then(
+        ([Graphic, geometryEngine]) => {
+          this.axios.get(fileName).then(response => {
+            this.graphicsLayer.remove(this.polygonGraphic);
+            this.graphicsLayer.remove(this.bufferGraphic);
+            this.polygonGraphic = new Graphic({
+              geometry: {
+                type: "polygon",
+                rings: response.data[0]
+              },
+              symbol: {
+                type: "simple-fill",
+                color: [227, 139, 79, 0.8], // orange, opacity 80%
+                outline: {
+                  color: [255, 255, 255],
+                  width: 1
+                }
+              }
+            });
+            var bufferGeometry = geometryEngine.geodesicBuffer(
+              this.polygonGraphic.geometry,
+              1000,
+              "miles"
+            );
+            this.bufferGraphic = new Graphic({
+              geometry: bufferGeometry,
+              symbol: {
+                type: "simple-fill",
+                color: [0, 0, 0, 0.2],
+                outline: {
+                  color: "rgba(0,0,0,.5)",
+                  width: 1
+                }
+              }
+            });
+            this.graphicsLayer.add(this.bufferGraphic);
+            this.graphicsLayer.add(this.polygonGraphic);
           });
-          this.graphicsLayer.add(this.polygonGraphic);
-        });
-      });
+        }
+      );
     },
     changeSources(index) {
       var data = {
@@ -318,48 +169,6 @@ export default {
         units: "kilometers"
       });
       this.map.getSource("traceBuffer").setData(buffered);
-    },
-    findNearestGraphic(event) {
-      return this.view.hitTest(event).then(function(response) {
-        var graphic;
-        // Get the Trail graphics only
-        if (response.results.length) {
-          graphic = response.results.filter(function(result) {
-            return result.graphic.layer === this.graphicsLayer;
-          })[0].graphic;
-        }
-        // Only return new graphics are found
-        if (graphic) {
-          if (
-            !this.activeGraphic ||
-            this.activeGraphic.attributes.OBJECTID !==
-              graphic.attributes.OBJECTID
-          ) {
-            return graphic;
-          } else {
-            return null;
-          }
-        } else {
-          return null;
-        }
-      });
-    },
-    drawBuffer(bufferGeometry) {
-      loadModules(["esri/Graphic"]).then(([Graphic]) => {
-        this.view.graphics.remove(this.bufferGraphic);
-        this.bufferGraphic = new Graphic({
-          geometry: bufferGeometry,
-          symbol: {
-            type: "simple-fill",
-            color: "rgba(0,0,0,0)",
-            outline: {
-              color: "rgba(0,0,0,.5)",
-              width: 1
-            }
-          }
-        });
-        this.view.graphics.add(this.bufferGraphic);
-      });
     }
   }
 };
