@@ -9,6 +9,7 @@
 import EventBus from "@/EventBus.js";
 import ScenicSpot from "@/components/ScenicSpot.vue";
 import KuaFu from "@/components/KuaFu.vue";
+import { loadModules } from "esri-loader";
 export default {
   components: {
     ScenicSpot,
@@ -20,6 +21,16 @@ export default {
       current_text: "",
       map: null,
       scenicspot: [],
+      eclipse_polygon:{
+          type: "polygon",
+          rings: [
+            [-118.818984489994, 34.0137559967283],
+            [-118.806796597377, 34.0215816298725],
+            [-118.791432890735, 34.0163883241613],
+            [-118.79596686535, 34.008564864635],
+            [-118.808558110679, 34.0035027131376]
+          ]
+      },
       features: [
         "eclipsearray/2020_06_21.json",
         "eclipsearray/2020_12_14.json",
@@ -51,59 +62,98 @@ export default {
   },
   mounted() {
     EventBus.$emit("router_change", "Travel");
-    // eslint-disable-next-line no-undef
-    mapboxgl.accessToken =
-      "pk.eyJ1IjoiMzA1NzU4MDI2OCIsImEiOiJjazgyaWM4ZmkxMW5kM2ZvcTY4dGR4amtjIn0.TJrXjIIqVSpQOHM6MS_g6g";
-    // eslint-disable-next-line no-undef
-    this.map = new mapboxgl.Map({
-      container: "map",
-      style: "mapbox://styles/mapbox/light-v10",
-      center: [-68.13734351262877, 45.137451890638886],
-      zoom: 5
-    });
-    this.map.on("load", () => {
-      this.map.addSource("trace", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          geometry: {
-            type: "Polygon",
-            coordinates: [[0, 0]]
+    loadModules(["esri/Map", "esri/views/MapView","esri/Graphic",
+      "esri/layers/GraphicsLayer"], { css: true }).then(
+      ([Map, MapView, Graphic, GraphicsLayer]) => {
+        const map = new Map({
+          basemap: "topo-vector"
+        });
+        this.view = new MapView({
+          container: this.$el,
+          map: map,
+          center: [-118.63, 34.1],
+          zoom: 12
+        });
+        var graphicsLayer = new GraphicsLayer();
+        map.add(graphicsLayer);
+        var polygon = {
+          type: "polygon",
+          rings: [
+            [-118.818984489994, 34.0137559967283],
+            [-118.806796597377, 34.0215816298725],
+            [-118.791432890735, 34.0163883241613],
+            [-118.79596686535, 34.008564864635],
+            [-118.808558110679, 34.0035027131376]
+          ]
+        };
+        var simpleFillSymbol = {
+          type: "simple-fill",
+          color: [227, 139, 79, 0.8], // orange, opacity 80%
+          outline: {
+            color: [255, 255, 255],
+            width: 1
           }
-        }
-      });
-      this.map.addSource("traceBuffer", {
-        type: "geojson",
-        data: {
-          type: "Feature",
-          geometry: {
-            type: "Polygon",
-            coordinates: [[0, 0]]
-          }
-        }
-      });
-      this.map.addLayer({
-        id: "maine0",
-        type: "fill",
-        source: "traceBuffer",
-        layout: {},
-        paint: {
-          "fill-color": "#040",
-          "fill-opacity": 0.3
-        }
-      });
-      this.map.addLayer({
-        id: "maine1",
-        type: "fill",
-        source: "trace",
-        layout: {},
-        paint: {
-          "fill-color": "#040",
-          "fill-opacity": 0.5
-        }
-      });
-      this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
-    });
+        };
+        var polygonGraphic = new Graphic({
+          geometry: polygon,
+          symbol: simpleFillSymbol
+        });
+        graphicsLayer.add(polygonGraphic);
+      }
+    );
+    // eslint-disable-next-line no-undef
+    // mapboxgl.accessToken =
+    //   "pk.eyJ1IjoiMzA1NzU4MDI2OCIsImEiOiJjazgyaWM4ZmkxMW5kM2ZvcTY4dGR4amtjIn0.TJrXjIIqVSpQOHM6MS_g6g";
+    // // eslint-disable-next-line no-undef
+    // this.map = new mapboxgl.Map({
+    //   container: "map",
+    //   style: "mapbox://styles/mapbox/light-v10",
+    //   center: [-68.13734351262877, 45.137451890638886],
+    //   zoom: 5
+    // });
+    // this.map.on("load", () => {
+    //   this.map.addSource("trace", {
+    //     type: "geojson",
+    //     data: {
+    //       type: "Feature",
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [[0, 0]]
+    //       }
+    //     }
+    //   });
+    //   this.map.addSource("traceBuffer", {
+    //     type: "geojson",
+    //     data: {
+    //       type: "Feature",
+    //       geometry: {
+    //         type: "Polygon",
+    //         coordinates: [[0, 0]]
+    //       }
+    //     }
+    //   });
+    //   this.map.addLayer({
+    //     id: "maine0",
+    //     type: "fill",
+    //     source: "traceBuffer",
+    //     layout: {},
+    //     paint: {
+    //       "fill-color": "#040",
+    //       "fill-opacity": 0.3
+    //     }
+    //   });
+    //   this.map.addLayer({
+    //     id: "maine1",
+    //     type: "fill",
+    //     source: "trace",
+    //     layout: {},
+    //     paint: {
+    //       "fill-color": "#040",
+    //       "fill-opacity": 0.5
+    //     }
+    //   });
+    //   this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
+    // });
     this.axios.get("scenicspots.json").then(response => {
       this.scenicspot = response.data;
       this.scenicspot.forEach(item => {
