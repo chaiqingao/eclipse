@@ -60,10 +60,11 @@ export default {
         "esri/Map",
         "esri/views/MapView",
         "esri/Graphic",
-        "esri/layers/GraphicsLayer"
+        "esri/layers/GraphicsLayer",
+        "esri/widgets/Directions"
       ],
       { css: true }
-    ).then(([Map, MapView, Graphic, GraphicsLayer]) => {
+    ).then(([Map, MapView, Graphic, GraphicsLayer, Directions]) => {
       const map = new Map({
         basemap: "topo-vector"
       });
@@ -75,11 +76,34 @@ export default {
         center: [120, 30],
         zoom: 3
       });
+      var directionsWidget = new Directions({
+        view: this.view,
+        routeServiceUrl:
+          "https://utility.arcgis.com/usrsvcs/appservices/vnc9qiiza2jeiQUl/rest/services/World/Route/NAServer/Route_World"
+      });
+      // Adds the Directions widget below other elements in
+      // the top right corner of the view
+      this.view.ui.add(directionsWidget, {
+        position: "top-right",
+        index: 2
+      });
+      this.view.on("click", event => {
+        // event is the event handle returned after the event fires.
+        this.view.hitTest(event).then(response => {
+          var results = response.results.filter(result => {
+            return result.graphic.layer === this.graphicsLayer;
+          });
+          if (results.length == 0) return;
+          var graphic = results[0].graphic;
+          EventBus.$emit("spot_changed", graphic.attributes.idx);
+        });
+      });
       this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
 
       this.axios.get("scenicspots.json").then(response => {
         this.scenicspot = response.data;
-        this.scenicspot.forEach(item => {
+        for (let i = 0; i < this.scenicspot.length; i++) {
+          let item = this.scenicspot[i];
           var point = {
             type: "point",
             longitude: item.longitude,
@@ -93,11 +117,14 @@ export default {
           };
           var pointGraphic = new Graphic({
             geometry: point,
-            symbol: simpleMarkerSymbol
+            symbol: simpleMarkerSymbol,
+            attributes: {
+              idx: i
+            }
           });
 
           this.graphicsLayer.add(pointGraphic);
-        });
+        }
       });
 
       // var point = {
@@ -138,6 +165,16 @@ export default {
     }
   },
   methods: {
+    findNearestGraphic(event) {
+      return this.view.hitTest(event).then(response => {
+        // Get the Trail graphics only
+        if (response.results.length) {
+          return response.results[0].graphic;
+        } else {
+          return null;
+        }
+      });
+    },
     distanceCal(lng1, lat1, lng2, lat2) {
       var radLat1 = (lat1 * Math.PI) / 180.0;
       var radLat2 = (lat2 * Math.PI) / 180.0;
@@ -245,7 +282,7 @@ export default {
           }
           var lonlat = this.centers[index];
           var target = [lonlat[0], lonlat[1]];
-          this.view.goTo(target,{speedFactor:6,easing:"linear"});
+          this.view.goTo(target, { speedFactor: 6, easing: "linear" });
         }
       );
     }
