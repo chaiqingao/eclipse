@@ -135,9 +135,9 @@ export default {
         };
         var simpleMarkerSymbol = {
           type: "picture-marker", // autocasts as new PictureMarkerSymbol()
-          url: "img/logo.png",
-          width: "64px",
-          height: "64px"
+          url: "img/Marker4.png",
+          width: "40px",
+          height: "50px"
         };
         var pointGraphic = new Graphic({
           geometry: point,
