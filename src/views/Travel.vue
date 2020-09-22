@@ -56,9 +56,14 @@ export default {
   mounted() {
     EventBus.$emit("router_change", "Travel");
     loadModules(
-      ["esri/Map", "esri/views/MapView", "esri/layers/GraphicsLayer"],
+      [
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/Graphic",
+        "esri/layers/GraphicsLayer"
+      ],
       { css: true }
-    ).then(([Map, MapView, GraphicsLayer]) => {
+    ).then(([Map, MapView, Graphic, GraphicsLayer]) => {
       const map = new Map({
         basemap: "topo-vector"
       });
@@ -71,6 +76,49 @@ export default {
         zoom: 3
       });
       this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
+
+      this.axios.get("scenicspots.json").then(response => {
+        this.scenicspot = response.data;
+        this.scenicspot.forEach(item => {
+          var point = {
+            type: "point",
+            longitude: item.longitude,
+            latitude: item.latitude
+          };
+          var simpleMarkerSymbol = {
+            type: "picture-marker", // autocasts as new PictureMarkerSymbol()
+            url: item.imgSrc,
+            width: "64px",
+            height: "64px"
+          };
+          var pointGraphic = new Graphic({
+            geometry: point,
+            symbol: simpleMarkerSymbol
+          });
+
+          this.graphicsLayer.add(pointGraphic);
+        });
+      });
+
+      // var point = {
+      //   type: "point",
+      //   longitude: -118.80657463861,
+      //   latitude: 34.0005930608889
+      // };
+      // var simpleMarkerSymbol = {
+      //   type: "picture-marker", // autocasts as new PictureMarkerSymbol()
+      //   url:
+      //     "https://static.arcgis.com/images/Symbols/Shapes/BlackStarLargeB.png",
+      //   width: "64px",
+      //   height: "64px"
+      // };
+
+      // var pointGraphic = new Graphic({
+      //   geometry: point,
+      //   symbol: simpleMarkerSymbol
+      // });
+
+      // this.graphicsLayer.add(pointGraphic);
     });
   },
   watch: {
@@ -152,23 +200,54 @@ export default {
       );
     },
     changeSources(index) {
-      var data = {
-        type: "FeatureCollection",
-        features: this.features
-      };
+      loadModules(["esri/Graphic", "esri/geometry/geometryEngine"]).then(
+        ([Graphic, geometryEngine]) => {
+          this.graphicsLayer.remove(this.polygonGraphic);
 
-      this.map.getSource("trace").setData(data);
-      var buffered;
-      this.map.flyTo({
-        center: this.centers[index],
-        zoom: 2.5,
-        pitch: 0
-      });
-      // eslint-disable-next-line no-undef
-      buffered = turf.buffer(this.features[index], 3000, {
-        units: "kilometers"
-      });
-      this.map.getSource("traceBuffer").setData(buffered);
+          for (let i = 0; i < this.features.length; i++) {
+            this.graphicsLayer.remove(this.bufferGraphic);
+            this.axios.get(this.features[i]).then(response => {
+              var TpolygonGraphic = new Graphic({
+                geometry: {
+                  type: "polygon",
+                  rings: response.data[0]
+                },
+                symbol: {
+                  type: "simple-fill",
+                  color: [227, 139, 79, 0.8], // orange, opacity 80%
+                  outline: {
+                    color: [255, 255, 255],
+                    width: 1
+                  }
+                }
+              });
+              if (i == index) {
+                var bufferGeometry = geometryEngine.geodesicBuffer(
+                  TpolygonGraphic.geometry,
+                  1000,
+                  "miles"
+                );
+                this.bufferGraphic = new Graphic({
+                  geometry: bufferGeometry,
+                  symbol: {
+                    type: "simple-fill",
+                    color: [0, 0, 0, 0.2],
+                    outline: {
+                      color: "rgba(0,0,0,.5)",
+                      width: 1
+                    }
+                  }
+                });
+                this.graphicsLayer.add(this.bufferGraphic);
+              }
+              this.graphicsLayer.add(TpolygonGraphic);
+            });
+          }
+          var lonlat = this.centers[index];
+          var target = [lonlat[0], lonlat[1]];
+          this.view.goTo(target,{speedFactor:6,easing:"linear"});
+        }
+      );
     }
   }
 };
