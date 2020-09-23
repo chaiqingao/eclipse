@@ -1,6 +1,6 @@
 <template>
   <div id="map" class="search">
-    <div style="position:absolute;z-index:10">
+    <div style="position:absolute;top:0;left:0;z-index:10;width:100%">
       <img src="img/ctyimg/Body01.png" alt="img" width="100%" />
     </div>
     <div>
@@ -8,10 +8,15 @@
         style="font-size: 50px;text-align: center;position:absolute;top:35%;left:30%;width:600px;height:100px;z-index:21;"
         id="sp_time"
       >
-        {{ daojishi[0] }}<span class="datetext">DAYS</span> {{ daojishi[1]
-        }}<span class="datetext">HRS</span> {{ daojishi[2]
-        }}<span class="datetext">MINS </span>
-        <span style="color:#E44379;">{{ daojishi[3] }}</span>
+        <span class="datenum"> {{ daojishi[0] }}</span
+        ><span class="datetext">DAYS </span>
+        <span class="datenum">{{ daojishi[1] }}</span
+        ><span class="datetext">HRS </span>
+        <span class="datenum"> {{ daojishi[2] }}</span
+        ><span class="datetext">MINS </span>
+        <span style="color:#E44379;"
+          ><span class="datenum"> {{ daojishi[3] }}</span></span
+        >
         <span class="datetext">SECS</span>
       </h1>
       <p
@@ -83,19 +88,14 @@ export default {
         this.view = new MapView({
           container: this.$el,
           map: map,
-          center: [-118.63, 34.1],
-          zoom: 12
+          center: [120, 30],
+          zoom: 3
         });
       }
     );
-    // eslint-disable-next-line no-undef
-
-    document
-      .getElementsByClassName("mapboxgl-ctrl-top-left")[0]
-      .setAttribute("style", "top:60px;z-index:20");
     setInterval(() => {
       var time = new Date(
-        new Date("2020-6-21 11:45:58").getTime() - new Date().getTime()
+        new Date("2020-12-14 11:45:58").getTime() - new Date().getTime()
       );
       this.daojishi = [
         time.getDate() < 10 ? "0" + time.getDate() : time.getDate(),
@@ -119,6 +119,9 @@ export default {
   font-size: 30px;
   text-align: center;
   font-weight: 100;
+}
+.datenum {
+  font-family: "Consoals";
 }
 .mapboxgl-ctrl-top-left {
   top: 100px;
