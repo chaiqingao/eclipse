@@ -70,7 +70,7 @@
           </el-form-item>
           <el-upload
             class="upload-demo"
-            action="api/postscripts/ImageUpload"
+            action="api/postscripts/uploadImage"
             :file-list="fileList"
             list-type="picture"
             :limit="2"

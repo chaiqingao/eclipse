@@ -20,11 +20,11 @@
               style="background-color: rgb(38, 198, 218); border-color: rgb(38, 198, 218);height:510px;padding:20px;"
             >
               <h1 style="color:white;">
-                <i class="el-icon-news"></i> {{ item.PTitle }}
+                <i class="el-icon-news"></i> {{ item.pTitle }}
               </h1>
               <img :src="item.img" width="100%" />
               <h1 style="color: hsla(0,0%,100%,.7);">
-                {{ "“" + item.PContent + "”" }}
+                {{ "“" + item.pContent + "”" }}
               </h1>
               <div
                 style="background-color:rgb(199,195,208); width: 100%;height: 100px;position: absolute;left:0px;bottom:0px;margin:0px;margin-bottom:50px"
@@ -33,9 +33,9 @@
                   style="color:white;position:absolute;bottom: 0px;left:20px;"
                 >
                   <i class="el-icon-location-information"></i>
-                  {{ item.poslon + "°E, " + item.poslat + "°N" }}<br />
+                  {{ item.Pos_lon + "°E, " + item.Pos_lat + "°N" }}<br />
                   <i class="el-icon-user"></i>
-                  {{ item.PUserName }}
+                  {{ item.pUserName }}
                 </h2>
                 <h2
                   style="color:white;position:absolute;bottom:0px;right:20px;"
@@ -57,17 +57,7 @@ import EventBus from "@/EventBus.js";
 export default {
   data() {
     return {
-      userShares: [
-        {
-          PContent: "在外滩看日食别有风味呢。",
-          PTitle: "我在上海追日",
-          PUserName: "西湖小子",
-          PUserid: "1",
-          pid: "1",
-          poslat: "31",
-          poslon: "121"
-        }
-      ]
+      userShares: []
     };
   },
   created() {
@@ -77,23 +67,15 @@ export default {
     EventBus.$off("user_post_changed", this.changeShare);
   },
   mounted() {
-    this.axios
-      .get("api/postscripts", {
-        headers: {
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
-        }
-      })
-      .then(response => {
-        let data = response.data;
-        data = this.$x2js.xml2js(data).postscriptss.postscripts;
-        for (let i = 0; i < data.length; i++) {
-          data[i].v1 = Math.ceil(Math.random() * 100);
-          data[i].v2 = Math.ceil(data[i].v1 / Math.random() / 5);
-          data[i].img = "img/postscript/" + (i + 1) + ".jpg";
-        }
-        this.userShares = data;
-      });
+    this.axios.get("api/postscripts").then(response => {
+      let data = response.data;
+      for (let i = 0; i < data.length; i++) {
+        data[i].v1 = Math.ceil(Math.random() * 100);
+        data[i].v2 = Math.ceil(data[i].v1 / Math.random() / 5);
+        data[i].img = "img/postscript/" + (i + 1) + ".jpg";
+      }
+      this.userShares = data;
+    });
   },
   methods: {
     // eslint-disable-next-line no-unused-vars

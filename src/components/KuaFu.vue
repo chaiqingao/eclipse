@@ -83,28 +83,22 @@ export default {
             "/" +
             date[1] +
             "/" +
-            date[2],
-          {
-            headers: {
-              Accept:
-                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
-            }
-          }
+            date[2]
         )
         .then(response => {
           let data = response.data;
-          data = this.$x2js.xml2js(data).worldeclipses.worldeclipse;
+          console.log(data);
           var tableData = [];
           data.forEach(item => {
             tableData.push({
-              date: item.year + "-" + item.month + "-" + item.day,
-              pos: item.longitude + ", " + item.latitude,
-              type: item.type,
-              duration: item.duration,
-              mag: item.mag,
-              pathWidth: item.pathWidth,
-              sarosNum: item.sarosNum,
-              sunAlt: item.sunAlt
+              date: item.Year + "-" + item.Month + "-" + item.Day,
+              pos: item.Longitude + ", " + item.Latitude,
+              type: item.Type,
+              duration: item.Duration,
+              mag: item.Mag,
+              pathWidth: item.PathWidth,
+              sarosNum: item.SarosNum,
+              sunAlt: item.SunAlt
             });
           });
           this.tableDatas.push(tableData);
