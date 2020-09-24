@@ -94,15 +94,19 @@ export default {
       }
     );
     setInterval(() => {
-      var time = new Date(
-        new Date("2020-12-14 11:45:58").getTime() - new Date().getTime()
-      );
+      var delta =
+        new Date("2020-12-14 11:45:58").getTime() - new Date().getTime();
+      delta = Math.floor(delta / 1000);
       this.daojishi = [
-        time.getDate() < 10 ? "0" + time.getDate() : time.getDate(),
-        time.getHours() < 10 ? "0" + time.getHours() : time.getDate(),
-        time.getMinutes() < 10 ? "0" + time.getMinutes() : time.getMinutes(),
-        time.getSeconds() < 10 ? "0" + time.getSeconds() : time.getSeconds()
+        "" + Math.floor(delta / (60 * 60 * 24)),
+        "" + Math.floor((delta % (60 * 60 * 24)) / 3600),
+        "" + Math.floor((delta % 3600) / 60),
+        "" + (delta % 60)
       ];
+      for (let i = 1; i < 4; i++) {
+        if (this.daojishi[i].length < 2)
+          this.daojishi[i] = "0" + this.daojishi[i];
+      }
     }, 1000);
   }
 };

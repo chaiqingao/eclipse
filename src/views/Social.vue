@@ -8,7 +8,7 @@
       ></i>
     </div>
     <div
-      style="width: 100%;position: absolute;bottom: 30px;left: 40%;z-index: 22;"
+      style="width: 60%;position: absolute;bottom: 30px;left: 40%;z-index: 22;"
     >
       <div style="width: 300px;">
         <el-slider
