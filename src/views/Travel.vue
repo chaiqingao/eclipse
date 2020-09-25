@@ -21,8 +21,9 @@ export default {
       current_text: "",
       map: null,
       graphicsLayer: null,
+      pointGraphicsLayer: null,
       polygonGraphic: null,
-      bufferGraphic: null,
+      bufferGraphics: [],
       scenicspot: [],
       features: [
         "eclipsearray/2020_06_21.json",
@@ -44,6 +45,13 @@ export default {
         [-140.42215, -71.73785, 0],
         [-78.25867, 43.98782, 0],
         [80.60983, -9.85548, 0]
+      ],
+      colorTable: [
+        [221, 89, 42, 0.2],
+        [240, 140, 63, 0.2],
+        [245, 162, 68, 0.2],
+        [255, 214, 110, 0.2],
+        [255, 247, 225, 0.2]
       ]
     };
   },
@@ -69,7 +77,9 @@ export default {
         basemap: "topo-vector"
       });
       this.graphicsLayer = new GraphicsLayer();
-      map.add(this.graphicsLayer);
+      this.pointGraphicsLayer = new GraphicsLayer();
+      map.add(this.graphicsLayer, -1);
+      map.add(this.pointGraphicsLayer, 100);
       this.view = new MapView({
         container: this.$el,
         map: map,
@@ -91,12 +101,33 @@ export default {
         // event is the event handle returned after the event fires.
         this.view.hitTest(event).then(response => {
           var results = response.results.filter(result => {
-            return result.graphic.layer === this.graphicsLayer;
+            return result.graphic.layer === this.pointGraphicsLayer;
           });
           if (results.length == 0) return;
           var graphic = results[0].graphic;
+          if (graphic.attributes == null) return;
           EventBus.$emit("spot_changed", graphic.attributes.idx);
         });
+        try {
+          let date = this.$route.query.date;
+          date = date.replaceAll("_", "");
+          let point = event.mapPoint;
+          let lon = point.longitude;
+          let lat = point.latitude;
+          this.axios
+            .get("api/eclipsePointInfo/" + date + "/" + lon + "/" + lat)
+            .then(response => {
+              var data = response.data;
+              this.view.popup.open({
+                title: data.name == undefined ? "Nowhere" : data.name,
+                content: this.getContent(data),
+                location: event.mapPoint,
+                actions: []
+              });
+            });
+        } catch (error) {
+          console.log();
+        }
       });
       this.changeSource("eclipsemetadata/" + this.$route.query.date + ".json");
 
@@ -123,168 +154,147 @@ export default {
             }
           });
 
-          this.graphicsLayer.add(pointGraphic);
+          this.pointGraphicsLayer.add(pointGraphic);
         }
       });
-
-      // var point = {
-      //   type: "point",
-      //   longitude: -118.80657463861,
-      //   latitude: 34.0005930608889
-      // };
-      // var simpleMarkerSymbol = {
-      //   type: "picture-marker", // autocasts as new PictureMarkerSymbol()
-      //   url:
-      //     "https://static.arcgis.com/images/Symbols/Shapes/BlackStarLargeB.png",
-      //   width: "64px",
-      //   height: "64px"
-      // };
-
-      // var pointGraphic = new Graphic({
-      //   geometry: point,
-      //   symbol: simpleMarkerSymbol
-      // });
-
-      // this.graphicsLayer.add(pointGraphic);
     });
   },
-  watch: {
-    current_text: function() {
-      var lng = this.current_text.split(",")[0];
-      var lat = this.current_text.split(",")[1];
-      var sdis = 100000000;
-      var sid = 0;
-      this.scenicspot.forEach(item => {
-        var dis = this.distanceCal(lng, lat, item.longitude, item.latitude);
-        if (dis < sdis) {
-          sdis = dis;
-          sid = item.sid;
-        }
-      });
-      EventBus.$emit("spot_changed", sid - 1);
-    }
-  },
   methods: {
-    findNearestGraphic(event) {
-      return this.view.hitTest(event).then(response => {
-        // Get the Trail graphics only
-        if (response.results.length) {
-          return response.results[0].graphic;
-        } else {
-          return null;
+    getContent(info) {
+      var first = "<div style='text-align:left;'>";
+      var last = "</div>";
+      if (info.solar == 0)
+        return first + "<h1>无法观测到此次日食😭</h1>" + last;
+      first +=
+        "<h1>" +
+        (info.visibility == "Partial solar eclipse visible"
+          ? "可以观测到日偏食😀"
+          : "可以观测到日全食😁") +
+        "，时长：" +
+        info.duration.fmt
+          .replaceAll("s", "")
+          .replaceAll(",", "")
+          .replaceAll(" ", "")
+          .replace("hour", "小时")
+          .replace("minute", "分")
+          .replace("econd", "秒") +
+        "</h1>";
+      console.log(info);
+      first += "<ul>";
+      info.events.forEach(item => {
+        first += "<li><h3>";
+        switch (item.type) {
+          case "p1":
+            first += "初亏";
+            break;
+          case "u1":
+            first += "食既";
+            break;
+          case "mx":
+            first += "食甚";
+            break;
+          case "ss":
+            first += "日落";
+            break;
+          case "sr":
+            first += "日出";
+            break;
+          case "u4":
+            first += "生光";
+            break;
+          case "p4":
+            first += "复圆";
+            break;
         }
+        first += "：" + item.txt + "</h3></li>";
       });
-    },
-    distanceCal(lng1, lat1, lng2, lat2) {
-      var radLat1 = (lat1 * Math.PI) / 180.0;
-      var radLat2 = (lat2 * Math.PI) / 180.0;
-      var a = radLat1 - radLat2;
-      var b = (lng1 * Math.PI) / 180.0 - (lng2 * Math.PI) / 180.0;
-      var s =
-        2 *
-        Math.asin(
-          Math.sqrt(
-            Math.pow(Math.sin(a / 2), 2) +
-              Math.cos(radLat1) *
-                Math.cos(radLat2) *
-                Math.pow(Math.sin(b / 2), 2)
-          )
-        );
-      s = s * 6378.137; // EARTH_RADIUS;
-      s = Math.round(s * 10000) / 10000;
-      return s;
+      first += "</ul>";
+      first +=
+        "<p>*自2000年以来，这天有" +
+        info.weather.cloud_avg +
+        "%的时间多云~" +
+        "</p>";
+      return first + last;
     },
     changeSource(fileName) {
+      loadModules(["esri/Graphic"]).then(([Graphic]) => {
+        this.axios.get(fileName).then(response => {
+          this.graphicsLayer.remove(this.polygonGraphic);
+          this.polygonGraphic = new Graphic({
+            geometry: {
+              type: "polygon",
+              rings: response.data[0]
+            },
+            symbol: {
+              type: "simple-fill",
+              color: [208, 1, 27, 0.2],
+              outline: {
+                width: 0
+              }
+            }
+          });
+          this.drawBuffer(this.polygonGraphic.geometry);
+          this.graphicsLayer.add(this.polygonGraphic);
+        });
+      });
+    },
+    drawBuffer(geometry) {
       loadModules(["esri/Graphic", "esri/geometry/geometryEngine"]).then(
         ([Graphic, geometryEngine]) => {
-          this.axios.get(fileName).then(response => {
-            this.graphicsLayer.remove(this.polygonGraphic);
-            this.graphicsLayer.remove(this.bufferGraphic);
-            this.polygonGraphic = new Graphic({
+          this.bufferGraphics.forEach(item => {
+            this.graphicsLayer.remove(item);
+          });
+          this.bufferGraphics = [];
+          for (let i = 5; i > 0; i--) {
+            var bufferGraphic = new Graphic({
+              geometry: geometryEngine.geodesicBuffer(
+                geometry,
+                i * 500,
+                "miles"
+              ),
+              symbol: {
+                type: "simple-fill",
+                color: this.colorTable[5 - i],
+                outline: {
+                  width: 0
+                }
+              }
+            });
+            this.graphicsLayer.add(bufferGraphic);
+            this.bufferGraphics.push(bufferGraphic);
+          }
+        }
+      );
+    },
+    changeSources(index) {
+      loadModules(["esri/Graphic"]).then(([Graphic]) => {
+        this.graphicsLayer.remove(this.polygonGraphic);
+
+        var lonlat = this.centers[index];
+        var target = [lonlat[0], lonlat[1]];
+        this.view.goTo(target, { speedFactor: 6, easing: "linear" });
+        for (let i = 0; i < this.features.length; i++) {
+          this.axios.get(this.features[i]).then(response => {
+            var TpolygonGraphic = new Graphic({
               geometry: {
                 type: "polygon",
                 rings: response.data[0]
               },
               symbol: {
                 type: "simple-fill",
-                color: [227, 139, 79, 0.8], // orange, opacity 80%
+                color: [208, 1, 27, 0.2], // orange, opacity 80%
                 outline: {
-                  color: [255, 255, 255],
-                  width: 1
+                  width: 0
                 }
               }
             });
-            var bufferGeometry = geometryEngine.geodesicBuffer(
-              this.polygonGraphic.geometry,
-              1000,
-              "miles"
-            );
-            this.bufferGraphic = new Graphic({
-              geometry: bufferGeometry,
-              symbol: {
-                type: "simple-fill",
-                color: [0, 0, 0, 0.2],
-                outline: {
-                  color: "rgba(0,0,0,.5)",
-                  width: 1
-                }
-              }
-            });
-            this.graphicsLayer.add(this.bufferGraphic);
-            this.graphicsLayer.add(this.polygonGraphic);
+            if (i == index) {
+              this.drawBuffer(TpolygonGraphic.geometry);
+              this.graphicsLayer.add(TpolygonGraphic);
+            }
           });
         }
-      );
-    },
-    changeSources(index) {
-      loadModules(["esri/Graphic", "esri/geometry/geometryEngine"]).then(
-        ([Graphic, geometryEngine]) => {
-          this.graphicsLayer.remove(this.polygonGraphic);
-
-          for (let i = 0; i < this.features.length; i++) {
-            this.graphicsLayer.remove(this.bufferGraphic);
-            this.axios.get(this.features[i]).then(response => {
-              var TpolygonGraphic = new Graphic({
-                geometry: {
-                  type: "polygon",
-                  rings: response.data[0]
-                },
-                symbol: {
-                  type: "simple-fill",
-                  color: [227, 139, 79, 0.8], // orange, opacity 80%
-                  outline: {
-                    color: [255, 255, 255],
-                    width: 1
-                  }
-                }
-              });
-              if (i == index) {
-                var bufferGeometry = geometryEngine.geodesicBuffer(
-                  TpolygonGraphic.geometry,
-                  1000,
-                  "miles"
-                );
-                this.bufferGraphic = new Graphic({
-                  geometry: bufferGeometry,
-                  symbol: {
-                    type: "simple-fill",
-                    color: [0, 0, 0, 0.2],
-                    outline: {
-                      color: "rgba(0,0,0,.5)",
-                      width: 1
-                    }
-                  }
-                });
-                this.graphicsLayer.add(this.bufferGraphic);
-              }
-              this.graphicsLayer.add(TpolygonGraphic);
-            });
-          }
-          var lonlat = this.centers[index];
-          var target = [lonlat[0], lonlat[1]];
-          this.view.goTo(target, { speedFactor: 6, easing: "linear" });
-        }
-      );
+      });
     }
   }
 };

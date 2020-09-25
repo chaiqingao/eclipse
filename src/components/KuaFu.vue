@@ -87,7 +87,6 @@ export default {
         )
         .then(response => {
           let data = response.data;
-          console.log(data);
           var tableData = [];
           data.forEach(item => {
             tableData.push({
