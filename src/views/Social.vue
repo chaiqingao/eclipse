@@ -1,28 +1,27 @@
 <template>
-  <div class="social">
-    <div id="map">
-      <div style=" position: absolute;bottom: 27px;left: 35%;z-index:21">
-        <i
-          :class="auto_play ? 'el-icon-video-pause' : 'el-icon-video-play'"
-          style="font-size: 50px;cursor:pointer;background-color: #409EFF;color:white;border-radius:50%;"
-          @click="auto_play = !auto_play"
-        ></i>
-      </div>
-      <div
-        style="width: 100%;position: absolute;bottom: 30px;left: 40%;z-index: 22;"
-      >
-        <div style="width: 300px;">
-          <el-slider
-            v-model="current_id"
-            :min="0"
-            :max="locations.length - 1"
-            :step="1"
-            show-stops
-          >
-          </el-slider>
-        </div>
+  <div id="map">
+    <div style=" position: absolute;bottom: 27px;left: 35%;z-index:21">
+      <i
+        :class="auto_play ? 'el-icon-video-pause' : 'el-icon-video-play'"
+        style="font-size: 50px;cursor:pointer;background-color: #409EFF;color:white;border-radius:50%;"
+        @click="auto_play = !auto_play"
+      ></i>
+    </div>
+    <div
+      style="width: 60%;position: absolute;bottom: 30px;left: 40%;z-index: 22;"
+    >
+      <div style="width: 300px;">
+        <el-slider
+          v-model="current_id"
+          :min="0"
+          :max="locations.length - 1"
+          :step="1"
+          show-stops
+        >
+        </el-slider>
       </div>
     </div>
+
     <Share class="share" />
     <UserShare class="user-share" />
   </div>
@@ -32,6 +31,7 @@
 import Share from "@/components/Share.vue";
 import UserShare from "@/components/UserShare.vue";
 import EventBus from "@/EventBus.js";
+import { loadModules } from "esri-loader";
 export default {
   components: {
     Share,
@@ -42,6 +42,8 @@ export default {
       pos: [128.23, 35.46],
       map: null,
       flag: 0,
+      graphicsLayer: null,
+      MarkerGraphic: null,
       locations: [
         {
           camera: {
@@ -93,6 +95,7 @@ export default {
       this.current_id = id;
     });
   },
+
   mounted() {
     EventBus.$emit("router_change", "Social");
     this.$notify({
@@ -100,41 +103,69 @@ export default {
       message: this.pos[0] + "°E, " + this.pos[1] + "°N",
       type: "success"
     });
+
     EventBus.$emit("posChange", this.pos);
     // eslint-disable-next-line no-undef
-    mapboxgl.accessToken =
-      "pk.eyJ1IjoiMzA1NzU4MDI2OCIsImEiOiJjazgyaWM4ZmkxMW5kM2ZvcTY4dGR4amtjIn0.TJrXjIIqVSpQOHM6MS_g6g";
-    // eslint-disable-next-line no-undef
-    this.map = new mapboxgl.Map({
-      container: "map",
-      style: "mapbox://styles/mapbox/light-v10",
-      center: [121, 31],
-      zoom: 9.68
-    });
-    for (let i = 0; i < this.locations.length; i++) {
-      // eslint-disable-next-line no-undef
-      new mapboxgl.Marker({ draggable: false })
-        .setLngLat(this.locations[i].camera.center)
-        .addTo(this.map);
-    }
+    loadModules(
+      [
+        "esri/Map",
+        "esri/views/MapView",
+        "esri/Graphic",
+        "esri/layers/GraphicsLayer"
+      ],
+      { css: true }
+    ).then(([Map, MapView, Graphic, GraphicsLayer]) => {
+      const map = new Map({
+        basemap: "topo-vector"
+      });
+      this.graphicsLayer = new GraphicsLayer();
+      map.add(this.graphicsLayer);
+      this.view = new MapView({
+        container: this.$el,
+        map: map,
+        center: [120, 30],
+        zoom: 5
+      });
 
-    // eslint-disable-next-line no-undef
+      this.locations.forEach(item => {
+        var point = {
+          type: "point",
+          longitude: item.camera.center[0],
+          latitude: item.camera.center[1]
+        };
+        var simpleMarkerSymbol = {
+          type: "picture-marker", // autocasts as new PictureMarkerSymbol()
+          url: "img/Marker4.png",
+          width: "40px",
+          height: "50px"
+        };
+        var pointGraphic = new Graphic({
+          geometry: point,
+          symbol: simpleMarkerSymbol
+        });
 
-    this.map.on("load", () => {
-      this.map.flyTo(this.locations[0].camera);
-      setInterval(() => {
-        if (this.auto_play) {
-          this.current_id = (this.current_id + 1) % this.locations.length;
-        }
-      }, 10000);
+        this.graphicsLayer.add(pointGraphic);
+      });
     });
-    document
-      .getElementsByClassName("mapboxgl-ctrl-top-left")[0]
-      .setAttribute("style", "top:60px;");
+
+    setTimeout(() => {
+      this.view.goTo(this.locations[0].camera.center);
+      this.view.zoom = 10;
+    }, 1000);
+
+    setInterval(() => {
+      if (this.auto_play) {
+        this.current_id = (this.current_id + 1) % this.locations.length;
+      }
+    }, 5000);
   },
+
   watch: {
     current_id: function() {
-      this.map.flyTo(this.locations[this.current_id].camera);
+      this.view.goTo(this.locations[this.current_id].camera.center, {
+        speedFactor: 400,
+        easing: "in-expo"
+      });
       EventBus.$emit("user_post_changed", this.current_id);
     }
   }

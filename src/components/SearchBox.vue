@@ -31,14 +31,14 @@
         <el-timeline-item
           v-for="(eclipse, index) in eclipses"
           :key="index"
-          :timestamp="eclipse.date.Format('yyyy-MM-dd')"
+          :timestamp="eclipse.Format('yyyy-MM-dd')"
           :hide-timestamp="true"
           icon="el-icon-sunny"
           size="large"
           style="width: 100px; margin: 10px;"
         >
-          <span class="timeline" @click="jump(eclipse.date)">{{
-            eclipse.date.Format("yyyy-MM-dd")
+          <span class="timeline" @click="jump(eclipse)">{{
+            eclipse.Format("yyyy-MM-dd")
           }}</span>
         </el-timeline-item>
       </el-timeline>
@@ -91,7 +91,7 @@ export default {
       }
       this.axios
         .get(
-          "api/worldeclipse/queryByDateReturnText/" +
+          "api/worldeclipse/queryByDate/" +
             this.date.getFullYear() +
             "/" +
             (this.date.getMonth() + 1) +
@@ -100,16 +100,8 @@ export default {
         )
         .then(response => {
           let dates = response.data;
-          try {
-            dates = JSON.parse(dates);
-          } catch (error) {
-            console.log();
-          }
-          // var datelen=Math.min(dates.length,6);
-
           for (let i = 0; i < dates.length; i++) {
-            let date = new Date(dates[i].date);
-            dates[i].date = date;
+            dates[i] = new Date(dates[i]);
           }
           this.eclipses = dates.splice(0, 6);
           if (this.eclipses.length == 0) {
